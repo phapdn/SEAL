@@ -13,6 +13,9 @@
 #include <cmath>
 #include <functional>
 
+#include <iostream>
+#include <fstream>
+
 using namespace std;
 using namespace seal::util;
 
@@ -894,7 +897,36 @@ namespace seal
 
         // Iterator pointing to the last component of encrypted
         auto encrypted_iter = iter(encrypted);
+//        cout << "encrypted_iter1 = " << encrypted_iter << endl;
+
         encrypted_iter += encrypted_size - 1;
+//        cout << "encrypted_iter2 = " << encrypted_iter << endl;
+
+        auto parms_id = encrypted.parms_id();
+        auto &context_data = *context_.get_context_data(parms_id);
+        auto &parms = context_data.parms();
+        auto &key_context_data = *context_.key_context_data();
+        auto &key_parms = key_context_data.parms();
+        auto scheme = parms.scheme();
+
+        size_t coeff_count = parms.poly_modulus_degree();
+        size_t decomp_modulus_size = parms.coeff_modulus().size();
+        auto &key_modulus = key_parms.coeff_modulus();
+        size_t key_modulus_size = key_modulus.size();
+        size_t rns_modulus_size = decomp_modulus_size + 1;
+        auto key_ntt_tables = iter(key_context_data.small_ntt_tables());
+        auto modswitch_factors = key_context_data.rns_tool()->inv_q_last_mod_q();
+
+        if (decomp_modulus_size == 4)
+        {
+            ofstream ct1;
+            ct1.open("D:/SEAL/ct11.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size * encrypted.size(); i++)
+            {
+                ct1 << encrypted[i] << endl;
+            }
+            ct1.close();
+        }
 
         SEAL_ITERATE(iter(size_t(0)), relins_needed, [&](auto I) {
             this->switch_key_inplace(
@@ -904,6 +936,19 @@ namespace seal
 
         // Put the output of final relinearization into destination.
         // Prepare destination only at this point because we are resizing down
+
+        cout << "encrypted_size_in = " << encrypted.size() << endl;
+        if (decomp_modulus_size == 4)
+        {
+            ofstream ct1;
+            ct1.open("D:/SEAL/ct22.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size * encrypted.size(); i++)
+            {
+                ct1 << encrypted[i] << endl;
+            }
+            ct1.close();
+        }
+
         encrypted.resize(context_, context_data_ptr->parms_id(), destination_size);
 #ifdef SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT
         // Transparent ciphertext output is not allowed.
@@ -911,6 +956,27 @@ namespace seal
         {
             throw logic_error("result ciphertext is transparent");
         }
+
+        cout << "encrypted_size_out = " << encrypted.size() << endl;
+        if (decomp_modulus_size == 4)
+        {
+            ofstream ct1;
+            ct1.open("D:/SEAL/ct33.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size * encrypted.size(); i++)
+            {
+                ct1 << encrypted[i] << endl;
+            }
+            ct1.close();
+        }
+
+        ofstream sk44;
+        sk44.open("D:/SEAL/ct44.txt", ios::binary);
+        for (uint64_t i = 0; i < coeff_count * decomp_modulus_size * encrypted.size(); i++)
+        {
+            sk44 << encrypted[i] << endl;
+        }
+        sk44.close();
+
 #endif
     }
 
@@ -2144,6 +2210,39 @@ namespace seal
         auto &key_vector = kswitch_keys.data()[kswitch_keys_index];
         size_t key_component_count = key_vector[0].data().size();
 
+        cout << endl;
+        cout << "coeff_count = " << coeff_count << endl;
+        cout << "decomp_modulus_size = " << decomp_modulus_size << endl;
+        cout << "key_modulus_size = " << key_modulus_size << endl;
+        cout << "rns_modulus_size = " << rns_modulus_size << endl;
+        cout << "kswitch_keys = " << kswitch_keys.data().size() << endl;
+        cout << "kswitch_keys_index = " << kswitch_keys_index << endl;
+        cout << "key_component_count = " << key_component_count << endl;
+        cout << endl;
+
+        if (decomp_modulus_size == 4)
+        {
+            ofstream sk1;
+            sk1.open("D:/SEAL/rk.txt", ios::binary);
+            for (uint64_t j = 0; j < decomp_modulus_size; j++)
+                for (uint64_t i = 0; i < coeff_count * key_modulus_size * 2; i++)
+                {
+                    sk1 << key_vector[j].data()[i] << endl;
+                }
+            sk1.close();
+        }
+        else
+        {
+            std::ofstream sk1;
+            sk1.open("D:/SEAL/rk1.txt", ios::binary);
+            for (uint64_t j = 0; j < decomp_modulus_size; j++)
+                for (uint64_t i = 0; i < coeff_count * key_modulus_size * 2; i++)
+                {
+                    sk1 << key_vector[j].data()[i] << endl;
+                }
+            sk1.close();
+        }
+
         // Check only the used component in KSwitchKeys.
         for (auto &each_key : key_vector)
         {
@@ -2157,10 +2256,34 @@ namespace seal
         SEAL_ALLOCATE_GET_RNS_ITER(t_target, coeff_count, decomp_modulus_size, pool);
         set_uint(target_iter, decomp_modulus_size * coeff_count, t_target);
 
+        if (decomp_modulus_size == 4)
+        {
+            ofstream sk2;
+            sk2.open("D:/SEAL/ct3.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size; i++)
+            {
+                sk2 << t_target[0][i] << endl;
+            }
+            sk2.close();
+        }
+
+        cout << "t_target = " << t_target.poly_modulus_degree() << endl;
+
         // In CKKS t_target is in NTT form; switch back to normal form
         if (scheme == scheme_type::ckks)
         {
             inverse_ntt_negacyclic_harvey(t_target, decomp_modulus_size, key_ntt_tables);
+        }
+
+        if (decomp_modulus_size == 4)
+        {
+            ofstream sk3;
+            sk3.open("D:/SEAL/intt.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size; i++)
+            {
+                sk3 << t_target[0][i] << endl;
+            }
+            sk3.close();
         }
 
         // Temporary result
@@ -2184,6 +2307,8 @@ namespace seal
                 SEAL_ALLOCATE_GET_COEFF_ITER(t_ntt, coeff_count, pool);
                 ConstCoeffIter t_operand;
 
+                cout << "IIIII = " << I << "\tJJJJJ = " << J << endl;
+
                 // RNS-NTT form exists in input
                 if ((scheme == scheme_type::ckks) && (I == J))
                 {
@@ -2200,11 +2325,48 @@ namespace seal
                     // Perform RNS conversion (modular reduction)
                     else
                     {
+                        cout << "key_modulus[key_index] = " << key_index << "\tkey_modulus[J] = " << J << endl;
+
                         modulo_poly_coeffs(t_target[J], coeff_count, key_modulus[key_index], t_ntt);
                     }
                     // NTT conversion lazy outputs in [0, 4q)
+                    cout << "key_index = " << key_index << endl;
                     ntt_negacyclic_harvey_lazy(t_ntt, key_ntt_tables[key_index]);
                     t_operand = t_ntt;
+
+                    if ((decomp_modulus_size == 4) && (I == 1) && (J == 0))
+                    {
+                        ofstream sk31;
+                        sk31.open("D:/SEAL/imn1.txt", ios::binary);
+                        for (uint64_t i = 0; i < coeff_count; i++)
+                        {
+                            sk31 << t_operand[i] << endl;
+                        }
+                        sk31.close();
+                    }
+
+                    if ((decomp_modulus_size == 4) && (I == 1) && (J == 2))
+                    {
+                        ofstream sk32;
+                        sk32.open("D:/SEAL/imn2.txt", ios::binary);
+                        for (uint64_t i = 0; i < coeff_count; i++)
+                        {
+                            sk32 << t_operand[i] << endl;
+                        }
+                        sk32.close();
+                    }
+
+                    if ((decomp_modulus_size == 4) && (I == 1) && (J == 3))
+                    {
+                        ofstream sk33;
+                        sk33.open("D:/SEAL/imn3.txt", ios::binary);
+                        for (uint64_t i = 0; i < coeff_count; i++)
+                        {
+                            sk33 << t_operand[i] << endl;
+                        }
+                        sk33.close();
+                    }
+
                 }
 
                 // Multiply with keys and modular accumulate products in a lazy fashion
@@ -2262,6 +2424,18 @@ namespace seal
         });
         // Accumulated products are now stored in t_poly_prod
 
+        if (decomp_modulus_size == 4)
+        {
+            ofstream sk4;
+            sk4.open("D:/SEAL/intt_rl.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * rns_modulus_size * 2; i++)
+
+            {
+                sk4 << t_poly_prod.get()[i] << endl;
+            }
+            sk4.close();
+        }
+
         // Perform modulus switching with scaling
         PolyIter t_poly_prod_iter(t_poly_prod.get(), coeff_count, rns_modulus_size);
         SEAL_ITERATE(iter(encrypted, t_poly_prod_iter), key_component_count, [&](auto I) {
@@ -2269,12 +2443,35 @@ namespace seal
             CoeffIter t_last(get<1>(I)[decomp_modulus_size]);
             inverse_ntt_negacyclic_harvey_lazy(t_last, key_ntt_tables[key_modulus_size - 1]);
 
+           if ((decomp_modulus_size == 4))
+           {
+               ofstream sk6;
+               sk6.open("D:/SEAL/i1ntt_ms.txt", ios::binary);
+               for (uint64_t i = 0; i < coeff_count * decomp_modulus_size; i++)
+               {
+                   sk6 << t_last[i] << endl;
+               }
+               sk6.close();
+
+           }
+
             // Add (p-1)/2 to change from flooring to rounding.
             uint64_t qk = key_modulus[key_modulus_size - 1].value();
             uint64_t qk_half = qk >> 1;
             SEAL_ITERATE(t_last, coeff_count, [&](auto &J) {
                 J = barrett_reduce_64(J + qk_half, key_modulus[key_modulus_size - 1]);
             });
+
+            if ((decomp_modulus_size == 4))
+            {
+                ofstream sk6;
+                sk6.open("D:/SEAL/i1ntt_ms_floor.txt", ios::binary);
+                for (uint64_t i = 0; i < coeff_count * decomp_modulus_size; i++)
+                {
+                    sk6 << t_last[i] << endl;
+                }
+                sk6.close();
+            }
 
             SEAL_ITERATE(iter(I, key_modulus, key_ntt_tables, modswitch_factors), decomp_modulus_size, [&](auto J) {
                 SEAL_ALLOCATE_GET_COEFF_ITER(t_ntt, coeff_count, pool);
@@ -2295,6 +2492,17 @@ namespace seal
                 uint64_t fix = qi - barrett_reduce_64(qk_half, get<1>(J));
                 SEAL_ITERATE(t_ntt, coeff_count, [fix](auto &K) { K += fix; });
 
+                if ((decomp_modulus_size == 4) && (qi == 1152921504598720513))
+                {
+                    ofstream sk6;
+                    sk6.open("D:/SEAL/i1ntt_ms_floor1.txt", ios::binary);
+                    for (uint64_t i = 0; i < coeff_count; i++)
+                    {
+                        sk6 << t_ntt[i] << endl;
+                    }
+                    sk6.close();
+                }
+
                 uint64_t qi_lazy = qi << 1; // some multiples of qi
                 if (scheme == scheme_type::ckks)
                 {
@@ -2313,13 +2521,67 @@ namespace seal
                     inverse_ntt_negacyclic_harvey_lazy(get<0, 1>(J), get<2>(J));
                 }
 
+                if ((decomp_modulus_size == 4) && (qi == 1152921504598720513))
+                {
+                    ofstream sk9;
+                    sk9.open("D:/SEAL/0ntt_ms.txt", ios::binary);
+                    for (uint64_t i = 0; i < coeff_count; i++)
+                    {
+                        sk9 << t_ntt[i] << endl;
+                    }
+                    sk9.close();
+                }
+                
                 // ((ct mod qi) - (ct mod qk)) mod qi
-                SEAL_ITERATE(iter(get<0, 1>(J), t_ntt), coeff_count, [&](auto K) { get<0>(K) += qi_lazy - get<1>(K); });
+                SEAL_ITERATE(iter(get<0, 1>(J), t_ntt), coeff_count, [&](auto K) {
+                    //cout << "get<0>(K) = " << get<0>(K) << endl;
+                    //cout << "get<1>(K) = " << get<1>(K) << endl;
+
+                    get<0>(K) += qi_lazy - get<1>(K);
+                });
+
+                if ((decomp_modulus_size == 4) && (qi == 1152921504598720513))
+                {
+                    ofstream sk7;
+                    sk7.open("D:/SEAL/1ntt_ms.txt", ios::binary);
+                    for (uint64_t i = 0; i < coeff_count; i++)
+                    {
+                        sk7 << get<0, 1>(J)[i] << endl;
+                    }
+                    sk7.close();
+                }
 
                 // qk^(-1) * ((ct mod qi) - (ct mod qk)) mod qi
                 multiply_poly_scalar_coeffmod(get<0, 1>(J), coeff_count, get<3>(J), get<1>(J), get<0, 1>(J));
+
+                if ((decomp_modulus_size == 4) && (qi == 1152921504598720513))
+                {
+                    ofstream sk8;
+                    sk8.open("D:/SEAL/2ntt_ms.txt", ios::binary);
+                    for (uint64_t i = 0; i < coeff_count; i++)
+                    {
+                        sk8 << get<0, 1>(J)[i] << endl;
+                    }
+                    sk8.close();
+                }
+
+                cout << "Prime value = " << get<1>(J).value() << endl;
+
                 add_poly_coeffmod(get<0, 1>(J), get<0, 0>(J), coeff_count, get<1>(J), get<0, 0>(J));
+
             });
         });
+
+        if (decomp_modulus_size == 4)
+        {
+            ofstream sk5;
+            sk5.open("D:/SEAL/intt_ms.txt", ios::binary);
+            for (uint64_t i = 0; i < coeff_count * decomp_modulus_size * encrypted.size(); i++)
+            {
+                sk5 << encrypted[i] << endl;
+            }
+            sk5.close();
+        }
+
     }
 } // namespace seal

@@ -24,6 +24,8 @@ int main()
         cout << "| 5. Rotation                | 5_rotation.cpp             |" << endl;
         cout << "| 6. Serialization           | 6_serialization.cpp        |" << endl;
         cout << "| 7. Performance Test        | 7_performance.cpp          |" << endl;
+        cout << "| 8. NTT                     | 8_ntt.cpp                  |" << endl;
+        cout << "| 9. KS module               | 9_KS module.cpp            |" << endl;
         cout << "+----------------------------+----------------------------+" << endl;
 
         /*
@@ -40,12 +42,12 @@ int main()
         bool valid = true;
         do
         {
-            cout << endl << "> Run example (1 ~ 7) or exit (0): ";
+            cout << endl << "> Run example (1 ~ 9) or exit (0): ";
             if (!(cin >> selection))
             {
                 valid = false;
             }
-            else if (selection < 0 || selection > 7)
+            else if (selection < 0 || selection > 9)
             {
                 valid = false;
             }
@@ -55,7 +57,7 @@ int main()
             }
             if (!valid)
             {
-                cout << "  [Beep~~] valid option: type 0 ~ 7" << endl;
+                cout << "  [Beep~~] valid option: type 0 ~ 9" << endl;
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
@@ -89,6 +91,14 @@ int main()
 
         case 7:
             example_performance_test();
+            break;
+
+        case 8:
+            example_ntt();
+            break;
+
+        case 9:
+            example_ks();
             break;
 
         case 0:

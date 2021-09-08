@@ -69,7 +69,7 @@ void example_ckks_basics()
     that our coeff_modulus is 200 bits total, which is below the bound for our
     poly_modulus_degree: CoeffModulus::MaxBitCount(8192) returns 218.
     */
-    size_t poly_modulus_degree = 8192;
+    size_t poly_modulus_degree = 65536;
     parms.set_poly_modulus_degree(poly_modulus_degree);
     parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 60, 40, 40, 60 }));
 

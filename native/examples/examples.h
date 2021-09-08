@@ -34,6 +34,10 @@ void example_serialization();
 
 void example_performance_test();
 
+void example_ntt();
+
+void example_ks();
+
 /*
 Helper function: Prints the name of the example in a fancy banner.
 */
